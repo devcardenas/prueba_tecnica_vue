@@ -1,4 +1,5 @@
 <template>
+  <Toaster position="top-right" richColors />
   <div>
     <v-card class="mx-auto my-8" elevation="16">
       <v-card-item>
@@ -25,10 +26,12 @@
 
 <script>
 import Results from '../components/Results.vue'
+import { Toaster, toast } from 'vue-sonner'
 
 export default {
   components: {
-    Results
+    Results,
+    Toaster
   },
   data() {
     return {
@@ -40,6 +43,14 @@ export default {
   methods: {
     async search() {
       this.loading = true;
+      this.results = await this.searchInAPI();
+      this.results = await this.searchInLocal();
+      this.loading = false;
+      if (!this.results) {
+        toast.error('No se encontraron resultados');
+      }
+    },
+    async searchInAPI() {
       try {
         const response = await fetch(`https://ebind-dev.egl-cloud.com/dgs-api-bridge/tarifas/consulta`, {
           method: 'POST',
@@ -49,11 +60,15 @@ export default {
           body: JSON.stringify({ idTarifa: this.idTarifa }),
         });
         const data = await response.json();
-        this.results = data.response.tarifas;
-        this.loading = false;
+        return data.response.tarifas;
       } catch (error) {
-        console.error(error);
+        toast.error('Ocurrió un error al buscar la tarifa en el servidor');
+        return [];
       }
+    },
+    searchInLocal() {
+      const tarifas = JSON.parse(localStorage.getItem('tarifas')) || [];
+      return tarifas.filter(tarifa => tarifa.idTarifa === this.idTarifa);
     }
   }
 }
